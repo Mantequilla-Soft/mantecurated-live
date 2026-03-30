@@ -272,10 +272,10 @@ export function estimateVoteValueFromWeight(
   account: Account,
   weightPercent: number,
   rewardFund: RewardFund,
-  medianPrice: MedianPrice
+  hivePriceUsd: number
 ): number {
   const votingPower = calculateVotingPower(account);
   const weight = (weightPercent / 100) * HIVE_100_PERCENT;
   const rshares = calculateRshares(account, votingPower, weight);
-  return estimateVoteValue(rshares, rewardFund, medianPrice);
+  return estimateVoteValue(rshares, rewardFund, hivePriceUsd);
 }
