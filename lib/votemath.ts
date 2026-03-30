@@ -147,6 +147,39 @@ export function getEffectiveHivePower(
 }
 
 /**
+ * Get own Hive Power (without delegations)
+ */
+export function getOwnHivePower(
+  account: Account,
+  globalProps: GlobalProps
+): number {
+  const ownVests = toNumber(account.vesting_shares);
+  return vestsToHivePower(ownVests, globalProps);
+}
+
+/**
+ * Get incoming delegations in HP
+ */
+export function getIncomingDelegations(
+  account: Account,
+  globalProps: GlobalProps
+): number {
+  const receivedVests = toNumber(account.received_vesting_shares);
+  return vestsToHivePower(receivedVests, globalProps);
+}
+
+/**
+ * Get outgoing delegations in HP
+ */
+export function getOutgoingDelegations(
+  account: Account,
+  globalProps: GlobalProps
+): number {
+  const delegatedVests = toNumber(account.delegated_vesting_shares);
+  return vestsToHivePower(delegatedVests, globalProps);
+}
+
+/**
  * Calculate rshares for a vote at 100% weight
  * Based on vote-aliento-blog formula with linear reward curve (/50)
  * Formula: rshares = (power × finalVest) / 10000

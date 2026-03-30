@@ -7,11 +7,14 @@
 :root {
   --hive-red: #E31337;
   --hive-cyan: #00D9FF;
+  --mantequilla-yellow: #FFD700;
+  --mantequilla-gold: #FFA500;
   --bg-primary: #0a0a0a;
   --bg-secondary: #141414;
   --bg-card: #1a1a1a;
   --border-primary: #2a2a2a;
   --border-glow: rgba(227, 19, 55, 0.3);
+  --border-glow-gold: rgba(255, 215, 0, 0.2);
   --text-primary: #ffffff;
   --text-secondary: #a0a0a0;
   --text-muted: #666666;
@@ -19,6 +22,10 @@
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 body {
@@ -29,6 +36,8 @@ body {
   color: var(--text-primary);
   font-family: 'JetBrains Mono', monospace;
   overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -48,7 +57,7 @@ h1, h2, h3, h4, h5, h6 {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, var(--hive-red), transparent, var(--hive-cyan));
+  background: linear-gradient(135deg, var(--mantequilla-gold), transparent, var(--mantequilla-yellow));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -66,11 +75,22 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .glow-red {
-  text-shadow: 0 0 20px rgba(227, 19, 55, 0.5);
+  text-shadow: 0 0 20px rgba(255, 165, 0, 0.6);
 }
 
 .glow-cyan {
   text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+.glow-gold {
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.butter-gradient {
+  background: linear-gradient(135deg, var(--mantequilla-yellow), var(--mantequilla-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 @keyframes fadeInUp {
@@ -90,10 +110,10 @@ h1, h2, h3, h4, h5, h6 {
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 5px rgba(227, 19, 55, 0.3);
+    box-shadow: 0 0 5px rgba(255, 165, 0, 0.3);
   }
   50% {
-    box-shadow: 0 0 20px rgba(227, 19, 55, 0.6);
+    box-shadow: 0 0 20px rgba(255, 165, 0, 0.6);
   }
 }
 
@@ -103,12 +123,12 @@ h1, h2, h3, h4, h5, h6 {
 
 input[type="text"]:focus {
   outline: none;
-  border-color: var(--hive-red);
-  box-shadow: 0 0 0 3px var(--border-glow);
+  border-color: var(--mantequilla-gold);
+  box-shadow: 0 0 0 3px var(--border-glow-gold);
 }
 
 button:hover:not(:disabled) {
-  box-shadow: 0 0 20px rgba(227, 19, 55, 0.4);
+  box-shadow: 0 0 20px rgba(255, 165, 0, 0.5);
 }
 
 /* Scrollbar styling */
@@ -127,5 +147,5 @@ button:hover:not(:disabled) {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--hive-red);
+  background: var(--mantequilla-gold);
 }

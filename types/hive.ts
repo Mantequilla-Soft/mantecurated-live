@@ -118,6 +118,9 @@ export interface VoteHistoryEntry {
 export interface AccountStats {
   votingPower: number;
   hivePower: number;
+  ownHivePower: number;
+  incomingDelegations: number;
+  outgoingDelegations: number;
   resourceCredits: number;
   reputation: number;
   hiveBalance: number;

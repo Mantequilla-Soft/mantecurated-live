@@ -29,7 +29,7 @@ export default function TopAuthorsChart({ voteHistory }: TopAuthorsChartProps) {
   return (
     <div className="bg-[var(--bg-card)] rounded-xl p-8 border border-[var(--border-primary)] card-glow animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
       <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
-        <span className="w-1 h-6 bg-[var(--hive-red)] rounded"></span>
+        <span className="w-1 h-6 bg-[var(--mantequilla-gold)] rounded"></span>
         Top Authors
       </h2>
       <p className="text-xs text-[var(--text-muted)] mb-6 uppercase tracking-wider">
@@ -37,28 +37,30 @@ export default function TopAuthorsChart({ voteHistory }: TopAuthorsChartProps) {
       </p>
 
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={topAuthors} layout="horizontal">
+        <BarChart data={topAuthors} layout="horizontal" margin={{ bottom: 60 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
           <XAxis
             dataKey="author"
             stroke="var(--text-muted)"
-            tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+            tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'JetBrains Mono' }}
             angle={-45}
             textAnchor="end"
-            height={100}
+            height={80}
+            interval={0}
           />
-          <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }} />
+          <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'JetBrains Mono' }} />
           <Tooltip
             contentStyle={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-primary)',
               borderRadius: '8px',
               fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
             }}
-            labelStyle={{ color: 'var(--hive-red)', fontWeight: 'bold' }}
+            labelStyle={{ color: 'var(--mantequilla-gold)', fontWeight: 'bold' }}
             itemStyle={{ color: '#fff' }}
           />
-          <Bar dataKey="voteCount" fill="var(--hive-red)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="voteCount" fill="var(--mantequilla-gold)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
 
