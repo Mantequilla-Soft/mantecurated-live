@@ -139,3 +139,39 @@ export interface VotingPowerDataPoint {
   timestamp: number;
   votingPower: number;
 }
+
+/**
+ * Curation Quality Score (CQS) related types
+ */
+
+export interface CurationMetrics {
+  totalVoteWeight: number;        // Wtot - Sum of all vote weights
+  uniqueAuthors: number;           // U - Number of unique authors voted for
+  top50Weight: number;             // W50 - Weight to top 50 authors
+  selfVoteWeight: number;          // Ws - Weight to self-votes
+  voteCount: number;               // Total number of votes
+  giniCoefficient: number;         // Gini coefficient (0-1, inequality measure)
+  timeWindow: {
+    startDate: string;
+    endDate: string;
+    daysIncluded: number;
+  };
+}
+
+export interface CurationSubScores {
+  breadth: number;       // B: 0-1, min(U/50, 1.0)
+  distribution: number;  // D: 0-1, 1 - Gini (weight equality across authors)
+  antiSelf: number;      // S: 0-1, 1 - (Ws / Wtot)
+}
+
+export interface CurationQualityScore {
+  score: number;                   // Final CQS: 1-10
+  rawScore: number;                // (B × D × S)^(1/3) - Geometric mean
+  subScores: CurationSubScores;
+  metrics: CurationMetrics;
+  topAuthors: Array<{
+    author: string;
+    voteCount: number;
+    totalWeight: number;
+  }>;
+}

@@ -10,8 +10,11 @@ interface TopAuthorsChartProps {
 
 export default function TopAuthorsChart({ voteHistory }: TopAuthorsChartProps) {
   const topAuthors = useMemo(() => {
+    // Filter to upvotes only (downvotes are for spam/abuse, not curation)
+    const upvotesOnly = voteHistory.filter(vote => vote.weight > 0);
+
     // Count votes per author
-    const authorVotes = voteHistory.reduce((acc, vote) => {
+    const authorVotes = upvotesOnly.reduce((acc, vote) => {
       if (!acc[vote.author]) {
         acc[vote.author] = 0;
       }
