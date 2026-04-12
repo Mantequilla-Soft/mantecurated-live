@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAccount, getGlobalProperties, getRewardFund, getCurrentMedianHistoryPrice, getVoteHistory, getHivePrice } from '@/lib/hive';
 import { calculateVotingPower, calculateFullVoteValue, calculateMaxVoteValue, getEffectiveHivePower, getOwnHivePower, getIncomingDelegations, getOutgoingDelegations, parseReputation, calculateResourceCredits, toNumber } from '@/lib/votemath';
-import type { HiveAccount, GlobalProperties, RewardFund, MedianPrice, VoteHistoryEntry, AccountStats, TopAuthor } from '@/types/hive';
+import { calculateCurationQualityScore } from '@/lib/curation-score';
+import type { HiveAccount, GlobalProperties, RewardFund, MedianPrice, VoteHistoryEntry, AccountStats, TopAuthor, CurationQualityScore } from '@/types/hive';
 import VotingPowerGauge from '@/components/VotingPowerGauge';
 import AccountStatsCard from '@/components/AccountStatsCard';
 import RecentVotesFeed from '@/components/RecentVotesFeed';
 import TopAuthorsChart from '@/components/TopAuthorsChart';
+import CurationQualityScoreCard from '@/components/CurationQualityScoreCard';
 
 interface DashboardProps {
   initialUsername?: string;
@@ -31,6 +33,7 @@ export default function Dashboard({ initialUsername = 'mantecurated' }: Dashboar
 
   // Computed stats
   const [stats, setStats] = useState<AccountStats | null>(null);
+  const [cqs, setCqs] = useState<CurationQualityScore | null>(null);
 
   const fetchAccountData = async (username: string) => {
     setLoading(true);
@@ -56,34 +59,32 @@ export default function Dashboard({ initialUsername = 'mantecurated' }: Dashboar
       setMedianPrice(priceData);
       setHivePriceUsd(hivePrice);
 
-      // Fetch vote history
-      const votes = await getVoteHistory(username, 1000);
+      // Fetch vote history (fetches enough to cover 7 days, pre-filtered for this user)
+      const votes = await getVoteHistory(username, 7);
       console.log('Raw votes fetched:', votes.length);
 
-      // Process vote history - ONLY votes cast BY this account
-      const processedVotes: VoteHistoryEntry[] = votes
-        .map((entry: any) => {
-          const [transactionNumber, transaction] = entry;
-          const [opType, opData] = transaction.op;
+      // Process vote history into VoteHistoryEntry format
+      const processedVotes: VoteHistoryEntry[] = votes.map((entry: any) => {
+        const [transactionNumber, transaction] = entry;
+        const [, opData] = transaction.op;
 
-          // Only include votes where this account is the VOTER (not the author receiving votes)
-          if (opType === 'vote' && opData.voter === username) {
-            return {
-              transactionNumber,
-              timestamp: transaction.timestamp,
-              voter: opData.voter,
-              author: opData.author,
-              permlink: opData.permlink,
-              weight: opData.weight,
-            };
-          }
-          return null;
-        })
-        .filter((vote): vote is VoteHistoryEntry => vote !== null)
-        .reverse(); // Most recent first
+        return {
+          transactionNumber,
+          timestamp: transaction.timestamp,
+          voter: opData.voter,
+          author: opData.author,
+          permlink: opData.permlink,
+          weight: opData.weight,
+        };
+      });
 
       console.log('Processed votes (cast by account):', processedVotes.length);
       setVoteHistory(processedVotes);
+
+      // Calculate Curation Quality Score
+      const curationScore = calculateCurationQualityScore(processedVotes, 7);
+      console.log('Curation Quality Score:', curationScore);
+      setCqs(curationScore);
 
       // Calculate stats
       const votingPower = calculateVotingPower(accountData);
@@ -222,7 +223,10 @@ export default function Dashboard({ initialUsername = 'mantecurated' }: Dashboar
             <AccountStatsCard stats={stats} accountName={account.name} />
           </div>
 
-          {/* Middle Row: Top Authors Chart */}
+          {/* Second Row: Curation Quality Score */}
+          <CurationQualityScoreCard cqs={cqs} />
+
+          {/* Third Row: Top Authors Chart */}
           <TopAuthorsChart voteHistory={voteHistory} />
 
           {/* Bottom Row: Recent Votes Feed */}

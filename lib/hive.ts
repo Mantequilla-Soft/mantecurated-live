@@ -98,20 +98,76 @@ export async function getAccountHistory(
 
 /**
  * Fetch only vote operations from account history
- * Vote operation type is typically 0
+ * Fetches enough operations to ensure we get votes spanning at least 7 days
+ * Only includes votes cast BY the specified user (not votes received)
  */
-export async function getVoteHistory(username: string, limit: number = 1000) {
+export async function getVoteHistory(username: string, targetDays: number = 7) {
   const client = getHiveClient();
 
   try {
-    // Get recent history and filter for votes
-    const history: any[] = await client.database.getAccountHistory(username, -1, limit);
+    const allVotes: any[] = [];
+    const sevenDaysAgo = new Date(Date.now() - targetDays * 24 * 60 * 60 * 1000);
+    let batchSize = 1000;
+    let start = -1;
+    let hasEnoughHistory = false;
+    let iterations = 0;
+    const maxIterations = 20; // Safety limit to prevent infinite loops
 
-    // Filter for vote operations
-    // Structure: [txId, { op: [operation_type, operation_data], ... }]
-    return history.filter(([, transaction]: any[]) => {
-      return transaction.op && transaction.op[0] === 'vote';
+    while (!hasEnoughHistory && iterations < maxIterations) {
+      iterations++;
+
+      // Fetch a batch of operations
+      const history: any[] = await client.database.getAccountHistory(username, start, batchSize);
+
+      if (history.length === 0) {
+        break; // No more history available
+      }
+
+      // Filter for vote operations cast BY this user (not votes received)
+      const votesInBatch = history.filter(([, transaction]: any[]) => {
+        if (!transaction.op || transaction.op[0] !== 'vote') return false;
+        // Only include votes where this user is the voter
+        return transaction.op[1].voter === username;
+      });
+
+      // Add votes to our collection
+      allVotes.push(...votesInBatch);
+
+      // Check if we have votes old enough (at least 7 days back)
+      if (votesInBatch.length > 0) {
+        const oldestVote = votesInBatch[votesInBatch.length - 1];
+        const oldestTimestamp = new Date(oldestVote[1].timestamp);
+
+        if (oldestTimestamp <= sevenDaysAgo) {
+          hasEnoughHistory = true;
+        }
+      }
+
+      // If we got less than requested, we've hit the end of history
+      if (history.length < batchSize) {
+        break;
+      }
+
+      // Update start for next batch (get the ID of the oldest operation)
+      start = history[0][0] - 1;
+
+      // Safety check: if start becomes invalid, break
+      if (start < 0) {
+        break;
+      }
+    }
+
+    console.log(`Fetched ${allVotes.length} total votes across ${iterations} batches`);
+
+    // Sort votes by timestamp (newest first) to ensure proper chronological order
+    // This is necessary because batches may be out of order
+    allVotes.sort((a, b) => {
+      const timeA = new Date(a[1].timestamp).getTime();
+      const timeB = new Date(b[1].timestamp).getTime();
+      return timeB - timeA; // Descending order (newest first)
     });
+
+    return allVotes;
   } catch (error) {
     console.error('Error fetching vote history:', error);
     throw error;
