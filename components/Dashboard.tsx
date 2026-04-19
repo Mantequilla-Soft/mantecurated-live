@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getAccount, getGlobalProperties, getRewardFund, getCurrentMedianHistoryPrice, getVoteHistory, getHivePrice } from '@/lib/hive';
 import { calculateVotingPower, calculateFullVoteValue, calculateMaxVoteValue, getEffectiveHivePower, getOwnHivePower, getIncomingDelegations, getOutgoingDelegations, parseReputation, calculateResourceCredits, toNumber } from '@/lib/votemath';
 import { calculateCurationQualityScore } from '@/lib/curation-score';
@@ -34,6 +35,99 @@ export default function Dashboard({ initialUsername = 'mantecurated' }: Dashboar
   // Computed stats
   const [stats, setStats] = useState<AccountStats | null>(null);
   const [cqs, setCqs] = useState<CurationQualityScore | null>(null);
+
+  const exportAsMarkdown = () => {
+    if (!account || !stats || !cqs) return;
+
+    // Helper function to format numbers with commas
+    const formatNumber = (num: number, decimals: number = 2): string => {
+      return num.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    };
+
+    const date = new Date().toISOString().split('T')[0];
+    let markdown = `# @${account.name} - Curation Dashboard Report\n\n`;
+    markdown += `**Generated:** ${date} | **Powered by:** [ManteCurated Live](https://mantecurated.3speak.tv)\n\n`;
+    markdown += `---\n\n`;
+
+    // Account Overview
+    markdown += `## Account Overview\n\n`;
+    markdown += `- **Username:** @${account.name}\n`;
+    markdown += `- **Total Hive Power:** ${formatNumber(stats.hivePower)} HP\n`;
+    markdown += `  - Own: ${formatNumber(stats.ownHivePower)} HP\n`;
+    markdown += `  - Incoming Delegations: ${formatNumber(stats.incomingDelegations)} HP\n`;
+    markdown += `  - Outgoing Delegations: ${formatNumber(stats.outgoingDelegations)} HP\n\n`;
+
+    // Voting Power
+    markdown += `## Voting Power & Value\n\n`;
+    markdown += `- **Current Voting Power:** ${stats.votingPower.toFixed(2)}%\n`;
+    markdown += `- **Vote Value:** $${stats.currentVoteValue.toFixed(4)}\n\n`;
+
+    // Curation Quality Score
+    markdown += `## Curation Quality Score (CQS)\n\n`;
+    markdown += `### Overall Score: ${cqs.score}/100\n\n`;
+    markdown += `**Raw Score:** ${cqs.rawScore.toFixed(3)}\n\n`;
+    markdown += `### Sub-Scores\n\n`;
+    markdown += `| Dimension | Score | Description |\n`;
+    markdown += `|-----------|-------|-------------|\n`;
+    markdown += `| **Breadth** | ${cqs.subScores.breadth.toFixed(2)} | Diversity of authors (ideal: 100 unique) |\n`;
+    markdown += `| **Distribution** | ${cqs.subScores.distribution.toFixed(2)} | Balance of vote weight (Gini-based) |\n`;
+    markdown += `| **Anti-Self** | ${cqs.subScores.antiSelf.toFixed(2)} | Community focus vs self-voting |\n\n`;
+
+    // Metrics
+    markdown += `### Detailed Metrics\n\n`;
+    markdown += `- **Total Votes (7 days):** ${cqs.metrics.voteCount}\n`;
+    markdown += `- **Unique Authors:** ${cqs.metrics.uniqueAuthors}\n`;
+    markdown += `- **Self-Vote Weight:** ${(cqs.metrics.selfVoteWeight / 100).toFixed(2)}%\n`;
+    markdown += `- **Self-Vote Percentage:** ${((1 - cqs.subScores.antiSelf) * 100).toFixed(2)}%\n`;
+    markdown += `- **Gini Coefficient:** ${cqs.metrics.giniCoefficient.toFixed(3)}\n`;
+    markdown += `- **Time Window:** ${cqs.metrics.timeWindow.daysIncluded} days\n\n`;
+
+    // Top Authors - Process the same way as TopAuthorsChart component for consistency
+    if (voteHistory && voteHistory.length > 0) {
+      // Filter to upvotes only
+      const upvotesOnly = voteHistory.filter(vote => vote.weight > 0);
+
+      // Count votes per author and calculate cumulative weight
+      const authorData: Record<string, { voteCount: number; totalWeight: number }> = {};
+      upvotesOnly.forEach(vote => {
+        if (!authorData[vote.author]) {
+          authorData[vote.author] = { voteCount: 0, totalWeight: 0 };
+        }
+        authorData[vote.author].voteCount++;
+        authorData[vote.author].totalWeight += Math.abs(vote.weight);
+      });
+
+      // Sort by vote count (same as display)
+      const sortedAuthors = Object.entries(authorData)
+        .map(([author, data]) => ({
+          author,
+          voteCount: data.voteCount,
+          totalWeight: data.totalWeight
+        }))
+        .sort((a, b) => b.voteCount - a.voteCount)
+        .slice(0, 50);
+
+      if (sortedAuthors.length > 0) {
+        markdown += `## Top 50 Authors Voted (7 days)\n\n`;
+        markdown += `*Sorted by vote count. Weight represents cumulative voting power spent on each author.*\n\n`;
+        markdown += `| Rank | Author | Votes | Cumulative Weight |\n`;
+        markdown += `|------|--------|-------|------------------|\n`;
+        sortedAuthors.forEach((author, index) => {
+          markdown += `| ${index + 1} | @${author.author} | ${author.voteCount} | ${(author.totalWeight / 100).toFixed(2)}% |\n`;
+        });
+        markdown += `\n`;
+      }
+    }
+
+    // Footer
+    markdown += `---\n\n`;
+    markdown += `*Report generated by [ManteCurated Live](https://mantecurated.3speak.tv/@${account.name})*\n`;
+    markdown += `*Built by [Mantequilla Soft](https://mantequilla-soft.com)*\n`;
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(markdown);
+    alert('Markdown report copied to clipboard!');
+  };
 
   const fetchAccountData = async (username: string) => {
     setLoading(true);
@@ -144,14 +238,24 @@ export default function Dashboard({ initialUsername = 'mantecurated' }: Dashboar
 
   return (
     <>
+      {/* Back Button */}
+      <Link
+        href="/"
+        className="text-[var(--text-muted)] hover:text-[var(--mantequilla-gold)] transition-colors flex items-center gap-2 mb-6 inline-block"
+      >
+        ← Back to Menu
+      </Link>
+
       {/* Header */}
       <div className="mb-10">
         <div className="flex items-center gap-3 md:gap-4 mb-4">
-          <img
-            src="/mantequillaSoftLogo.png"
-            alt="Mantequilla Soft Logo"
-            className="w-12 h-12 md:w-16 md:h-16 object-contain flex-shrink-0"
-          />
+          <Link href="/" className="cursor-pointer hover:opacity-80 transition-opacity">
+            <img
+              src="/mantequillaSoftLogo.png"
+              alt="Mantequilla Soft Logo"
+              className="w-12 h-12 md:w-16 md:h-16 object-contain flex-shrink-0"
+            />
+          </Link>
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold" style={{ fontFamily: 'Syne, sans-serif' }}>
               <span className="glow-red">ManteCurated</span>
@@ -213,6 +317,22 @@ export default function Dashboard({ initialUsername = 'mantecurated' }: Dashboar
       {/* Dashboard Content */}
       {account && stats && globalProps && rewardFund && medianPrice && hivePriceUsd > 0 && !loading && (
         <div className="space-y-6">
+          {/* Export Button */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={exportAsMarkdown}
+              className="px-6 py-3 bg-[var(--bg-secondary)] border border-[var(--mantequilla-gold)] text-[var(--mantequilla-gold)] rounded-lg hover:bg-[var(--mantequilla-gold)] hover:text-black transition-all font-semibold flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="4" width="12" height="14" rx="1" stroke="currentColor" strokeWidth="2" fill="none"/>
+                <path d="M8 4V2M12 4V2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M16 8H20V22H8V18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Copy Full Report as Markdown
+            </button>
+          </div>
+
           {/* Top Row: VP Gauge and Account Stats */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <VotingPowerGauge

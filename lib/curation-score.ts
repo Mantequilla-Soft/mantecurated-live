@@ -3,12 +3,12 @@
  *
  * Implements the Curation-Quality Score proposal for Hive blockchain.
  * Measures curation quality across three dimensions:
- * - Breadth (B): Diversity of authors (up to 50)
+ * - Breadth (B): Diversity of authors (up to 100)
  * - Distribution (D): How evenly weight is spread (Gini-based)
  * - Anti-Self (S): Avoiding self-vote bias
  *
- * Formula: CQS = ceil(RawScore × 9) + 1, where RawScore = (B × D × S)^(1/3)
- * Range: 1-10 (higher is better)
+ * Formula: CQS = ceil(RawScore × 99) + 1, where RawScore = (B × D × S)^(1/3)
+ * Range: 1-100 (higher is better)
  */
 
 import type { VoteHistoryEntry, CurationMetrics, CurationSubScores, CurationQualityScore } from '@/types/hive';
@@ -107,11 +107,11 @@ export function calculateTopNWeight(
 
 /**
  * Calculate Breadth Score (B)
- * B = min(U / 50, 1.0)
- * Rewards voting for up to 50 unique authors
+ * B = min(U / 100, 1.0)
+ * Rewards voting for up to 100 unique authors
  */
 export function calculateBreadthScore(uniqueAuthors: number): number {
-  return Math.min(uniqueAuthors / 50, 1.0);
+  return Math.min(uniqueAuthors / 100, 1.0);
 }
 
 /**
@@ -176,14 +176,14 @@ export function calculateAntiSelfScore(totalWeight: number, selfWeight: number):
 /**
  * Calculate final CQS from sub-scores using Geometric Mean
  * RawScore = (B × D × S)^(1/3)
- * CQS = ceil(RawScore × 9) + 1
- * Range: 1-10
+ * CQS = ceil(RawScore × 99) + 1
+ * Range: 1-100
  *
  * Geometric mean naturally penalizes imbalance - you cannot have one terrible
  * dimension and still score high by compensating with other dimensions.
  */
 export function calculateFinalCQS(breadth: number, distribution: number, antiSelf: number): { score: number; rawScore: number } {
-  // Use very small minimum to allow terrible curators to score 1/10
+  // Use very small minimum to allow terrible curators to score 1/100
   // but prevent complete zeros from breaking the calculation
   const MIN_VALUE = 0.001;
   const b = Math.max(breadth, MIN_VALUE);
@@ -194,12 +194,12 @@ export function calculateFinalCQS(breadth: number, distribution: number, antiSel
   const rawScore = Math.pow(b * d * s, 1/3);
 
   // For very low scores (rawScore < 0.02), use floor instead of ceil
-  // This allows truly terrible curators to score 1/10
+  // This allows truly terrible curators to score 1/100
   let score;
   if (rawScore < 0.02) {
-    score = Math.max(1, Math.floor(rawScore * 9) + 1);
+    score = Math.max(1, Math.floor(rawScore * 99) + 1);
   } else {
-    score = Math.ceil(rawScore * 9) + 1;
+    score = Math.ceil(rawScore * 99) + 1;
   }
 
   return { score, rawScore };
@@ -307,10 +307,10 @@ export function calculateCurationQualityScore(
  * Get color for CQS score (for UI)
  */
 export function getCQSColor(score: number): string {
-  if (score >= 9) return 'from-green-500 to-emerald-600';
-  if (score >= 7) return 'from-blue-500 to-cyan-600';
-  if (score >= 5) return 'from-yellow-500 to-orange-500';
-  if (score >= 3) return 'from-orange-500 to-red-500';
+  if (score >= 90) return 'from-green-500 to-emerald-600';
+  if (score >= 70) return 'from-blue-500 to-cyan-600';
+  if (score >= 50) return 'from-yellow-500 to-orange-500';
+  if (score >= 30) return 'from-orange-500 to-red-500';
   return 'from-red-500 to-red-700';
 }
 
@@ -318,9 +318,9 @@ export function getCQSColor(score: number): string {
  * Get interpretation text for CQS score
  */
 export function getCQSInterpretation(score: number): string {
-  if (score >= 9) return 'Exceptional curator - Diverse, balanced, community-focused';
-  if (score >= 7) return 'Strong curator - Good diversity and distribution';
-  if (score >= 5) return 'Average curator - Room for improvement in breadth or distribution';
-  if (score >= 3) return 'Narrow curator - Limited diversity or concentrated voting';
+  if (score >= 90) return 'Exceptional curator - Diverse, balanced, community-focused';
+  if (score >= 70) return 'Strong curator - Good diversity and distribution';
+  if (score >= 50) return 'Average curator - Room for improvement in breadth or distribution';
+  if (score >= 30) return 'Narrow curator - Limited diversity or concentrated voting';
   return 'Very narrow curation - Consider diversifying and spreading votes more evenly';
 }
