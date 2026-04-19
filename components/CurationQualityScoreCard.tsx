@@ -109,7 +109,7 @@ export default function CurationQualityScoreCard({ cqs }: CurationQualityScoreCa
                 <div className="text-7xl font-bold glow-red data-value" style={{ fontFamily: 'Syne, sans-serif' }}>
                   {score}
                 </div>
-                <div className="text-sm font-semibold text-[var(--text-muted)] mt-1">/ 10</div>
+                <div className="text-sm font-semibold text-[var(--text-muted)] mt-1">/ 100</div>
                 <div className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mt-2">
                   Quality Score
                 </div>
@@ -130,7 +130,7 @@ export default function CurationQualityScoreCard({ cqs }: CurationQualityScoreCa
             <SubScoreBar
               label="Breadth"
               value={subScores.breadth}
-              description="Diversity of authors (ideal: 50+ unique authors)"
+              description="Diversity of authors (ideal: 100 unique authors)"
               metric={`${metrics.uniqueAuthors} authors`}
             />
 
