@@ -1,0 +1,143 @@
+# ManteCurated Live
+
+Real-time Hive blockchain curation analytics dashboard. Built with Next.js 14 (App Router), TypeScript, Tailwind CSS, and @hiveio/dhive.
+
+## What it does
+
+Shows any Hive account's curation activity: voting power, vote value, account stats, recent votes, top authors voted, and a **Curation Quality Score (CQS)** — a 1–100 metric that measures how good a curator an account is.
+
+## Stack
+
+- Next.js 14 App Router, React 18, TypeScript
+- @hiveio/dhive for Hive RPC calls (multi-node failover)
+- Tailwind CSS + Recharts for UI
+- No database — all data comes from the Hive blockchain in real time
+
+## Project layout
+
+```
+app/
+  page.tsx              # Landing page
+  [username]/page.tsx   # Dashboard for any Hive account (e.g. /@mantequilla)
+  s/single/page.tsx     # Single curator view
+  c/compare/page.tsx    # Multi-curator comparison
+  api/
+    cqs/route.ts        # REST API: GET /api/cqs?account=<username>
+
+components/
+  Dashboard.tsx             # Main client component, orchestrates all data fetching
+  CurationQualityScoreCard.tsx
+  VotingPowerGauge.tsx
+  AccountStatsCard.tsx
+  RecentVotesFeed.tsx
+  TopAuthorsChart.tsx
+  CuratorComparison.tsx
+
+lib/
+  hive.ts           # All Hive RPC calls (getAccount, getVoteHistory, etc.)
+  curation-score.ts # CQS algorithm
+  votemath.ts       # VP%, vote value, HP, RC calculations
+  format.ts         # Number formatting helpers
+
+types/
+  hive.ts           # All TypeScript interfaces
+```
+
+## CQS algorithm (lib/curation-score.ts)
+
+Scores a curator 1–100 using a geometric mean of three sub-scores, each 0–1:
+
+- **Breadth (B)** = min(uniqueAuthors / 100, 1.0) — diversity of authors voted
+- **Distribution (D)** = 1 − Gini(authorWeights) — how evenly vote weight is spread
+- **Anti-Self (S)** = 1 − (selfVoteWeight / totalVoteWeight) — penalises self-voting
+
+```
+rawScore = (B × D × S)^(1/3)
+CQS      = ceil(rawScore × 99) + 1     # range: 1–100
+```
+
+Geometric mean means you cannot compensate a weak dimension with a strong one. Only upvotes (weight > 0) in the last 7 days are counted. Returns `CurationQualityScore` (see types/hive.ts).
+
+## REST API
+
+### GET /api/cqs?account=\<username\>
+
+Returns the CQS for any Hive account. Responses are cached in-memory for 15 minutes per account.
+
+**Request**
+```
+GET /api/cqs?account=mantequilla
+```
+Leading `@` is stripped automatically. Account must match `[a-z0-9._-]{3,16}`.
+
+**Success response (200)**
+```json
+{
+  "account": "mantequilla",
+  "score": 73,
+  "rawScore": 0.741,
+  "subScores": {
+    "breadth": 0.85,
+    "distribution": 0.79,
+    "antiSelf": 1.0
+  },
+  "metrics": {
+    "totalVoteWeight": 184200,
+    "uniqueAuthors": 85,
+    "top50Weight": 184200,
+    "selfVoteWeight": 0,
+    "voteCount": 142,
+    "giniCoefficient": 0.21,
+    "timeWindow": {
+      "startDate": "2026-06-05T12:00:00.000Z",
+      "endDate": "2026-06-12T12:00:00.000Z",
+      "daysIncluded": 7
+    }
+  },
+  "topAuthors": [
+    { "author": "someone", "voteCount": 5, "totalWeight": 5000 }
+  ],
+  "cachedAt": "2026-06-12T18:00:00.000Z",
+  "fromCache": false,
+  "cacheExpiresIn": 900
+}
+```
+
+**Error responses**
+- `400` — missing or invalid account name
+- `404` — account has no calculable score
+- `502` — Hive RPC nodes unreachable
+
+`fromCache: true` means the result came from the in-memory cache. `cacheExpiresIn` is seconds until the cache entry expires.
+
+## Hive RPC (lib/hive.ts)
+
+Uses a dhive `Client` with four failover nodes:
+```
+https://api.hive.blog
+https://api.deathwing.me
+https://hive-api.arcange.eu
+https://api.openhive.network
+```
+
+Key functions:
+- `getAccount(username)` — full account object
+- `getVoteHistory(username, days=7)` — batches up to 20×1000 history ops, returns vote ops cast BY the user sorted newest-first
+- `getGlobalProperties()` — needed for HP conversions
+- `getRewardFund()` — needed for vote value
+- `getHivePrice()` — CoinGecko USD price, fallback $0.30
+
+## URL routing
+
+- `/@username` and `/username` both work (rewrite in next.config.js)
+- Curator comparison: `/c/compare`
+- Single view: `/s/single`
+
+## Running locally
+
+```bash
+npm install
+npm run dev   # http://localhost:3000
+```
+
+No environment variables required — all data is public on-chain.
