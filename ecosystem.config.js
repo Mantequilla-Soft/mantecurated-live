@@ -3,7 +3,8 @@ module.exports = {
     {
       name: 'mantecurated',
       script: 'node_modules/.bin/next',
-      args: 'start -p ${PORT:-3010}',
+      args: 'start -p 3010',
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3010,
